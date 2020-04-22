@@ -182,8 +182,6 @@ function block_update($user_id)
 	$conditions = array("alumno_id" => $user_id, "estado" => 1);
 	$block_exists = $DB->record_exists($table, $conditions);
 
-	$blocked = false;
-
 	//if currently unblocked
 	//check if needs to be blocked
 	if ($books_exist) 
@@ -235,6 +233,7 @@ function block_update($user_id)
 			}
 		}
 	}
+	
 	//unblock user, if user is blocked currently
 	//update user, if blocked currently and reblocked
 	else if ($block_exists) {

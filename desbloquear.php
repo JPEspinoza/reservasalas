@@ -83,26 +83,37 @@ if($action == 'view'){
         $search = $data->search;
     }
     $like='';
-    $query = 'Select rb.id,u.username,u.firstname, u.lastname, rb.fecha_bloqueo, u.id as user_id
-                from {reservasalas_bloqueados} as rb 
-                inner join {user} as u on (u.id = rb.alumno_id) 
-                where estado = :estado 
-                AND ('.$DB->sql_like('username', ':search1' , $casesensitive = false, $accentsensitive = false, $notlike = false).' 
-                OR '.$DB->sql_like('firstname', ':search2' , $casesensitive = false, $accentsensitive = false, $notlike = false).'
-                OR '.$DB->sql_like('lastname', ':search3' , $casesensitive = false, $accentsensitive = false, $notlike = false).')';
-    if($bloqueados = $DB->get_records_sql($query, array("estado" => 1, "search1" => "%$search%","search2" => "%$search%","search3" => "%$search%"), 0, 30)){
-        $table = new html_table();
-        $table->head = array(
-            '#',
-            get_string('date','local_reservasalas'),
-            get_string('name','local_reservasalas'),
-            get_string('lastname','local_reservasalas'),
-            get_string('email','local_reservasalas'),
-            get_string('action','local_reservasalas')
-        );
+    $query = '
+        SELECT rb.id,u.username,u.firstname, u.lastname, rb.fecha_bloqueo, u.id AS user_id
+        from {reservasalas_bloqueados} AS rb 
+        INNER JOIN {user} AS u ON (u.id = rb.alumno_id) 
+        WHERE estado = :estado 
+        AND ('.$DB->sql_like('username', ':search1' , $casesensitive = false, $accentsensitive = false, $notlike = false).' 
+        OR '.$DB->sql_like('firstname', ':search2' , $casesensitive = false, $accentsensitive = false, $notlike = false).'
+        OR '.$DB->sql_like('lastname', ':search3' , $casesensitive = false, $accentsensitive = false, $notlike = false).')'
+    ;
+    
+    $bloqueados = $DB->get_records_sql($query, array("estado" => 1, "search1" => "%$search%","search2" => "%$search%","search3" => "%$search%"), 0, 30);
 
-        $counter = 1;
-        foreach($bloqueados as $bloqueado){
+    $table = new html_table();
+    $table->head = array(
+        '#',
+        get_string('date','local_reservasalas'),
+        get_string('name','local_reservasalas'),
+        get_string('lastname','local_reservasalas'),
+        get_string('email','local_reservasalas'),
+        get_string('action','local_reservasalas')
+    );
+
+    $counter = 1;
+    foreach($bloqueados as $bloqueado){
+        //update the user to check if its still blocked
+        block_update($bloqueado->user_id);
+
+        //if still blocked add to the table
+        //add the user to the table
+        if(is_blocked($bloqueado->user_id))
+        {
             $table->data[] = array(
                 $counter,
                 $bloqueado->fecha_bloqueo,
@@ -111,22 +122,25 @@ if($action == 'view'){
                 $bloqueado->username,
                 $OUTPUT->single_button(new moodle_url($url, array('action'=>'unblock', 'id'=>$bloqueado->id)), get_string('unblock','local_reservasalas'))
             );
-
-            //instead of updating everyone only update the 30 people shown
-            //beware, if someone is actually updated it wont show on the table since its already loaded
-            block_update($bloqueado->user_id);
-
-            //list only the first 30
-            if($counter >= 30)
-            {
-                break;
-            }
-
-            $counter++;
         }
+
+        //list only the first 30
+        if($counter >= 30)
+        {
+            break;
+        }
+
+        $counter++;
+    }
+
+    //if there is any data on the table show it, otherwise show message
+    if(count($table->data) > 0)
+    {
         $dom = $form->display();
         $dom .= html_writer::table($table);
-    }else{
+    }
+    else
+    {
         $dom = $form->display();
         $dom .= html_writer::div(get_string('noblocked','local_reservasalas'), 'alert alert-warning');
     }

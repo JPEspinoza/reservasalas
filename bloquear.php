@@ -26,7 +26,6 @@
 
 
 //Página para bloquear alumnos.
-//Pruebas git
 require_once(dirname(__FILE__) . '/../../config.php'); //obligatorio
 require_once($CFG->dirroot.'/local/reservasalas/forms.php');
 require_once($CFG->dirroot.'/local/reservasalas/tablas.php');
